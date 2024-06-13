@@ -4,6 +4,8 @@ import "./globals.css";
 import { Suspense } from "react";
 import { Loading } from "@/components/auth/loading";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { POIProvider } from "@/context/POIContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +24,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <Suspense fallback={<Loading />}>
           <Toaster />
-          {children}
+          <POIProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </POIProvider>
         </Suspense>
       </body>
     </html>

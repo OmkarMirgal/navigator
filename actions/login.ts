@@ -2,6 +2,10 @@
 
 import * as z from "zod";
 import { LoginSchema } from "@/schemas";
+// import { client, connect } from "@/lib/db_pg";
+import { db } from "@/lib/db";
+import bcrypt from "bcrypt";
+import { getUserByEmail } from "@/lib/utils";
 
 export const login = async (
   values: z.infer<typeof LoginSchema>
@@ -14,16 +18,18 @@ export const login = async (
   }
 
   const { email, password } = validatedFields.data;
-  console.log(email, password);
 
-  // try {
-  //   await signIn("credentials", {
-  //     email,
-  //     password,
-  //     redirectTo: callbackUrl || DEFAULT_LOGIN_REDIRECT,
-  //   })
-  // } catch (error) {
+  const existingUser = await getUserByEmail(email);
 
-  //     return { error: "Invalid credentials!" }
-  //   }
+  if (!existingUser || !existingUser.email || !existingUser.password) {
+    return { error: "Email does not exist!" };
+  }
+
+  const passwordCheck = await bcrypt.compare(password, existingUser.password);
+
+  if (!passwordCheck) {
+    return { error: "Wrong password!" };
+  }
+
+  return { success: "Login successful! " };
 };

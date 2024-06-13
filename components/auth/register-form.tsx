@@ -1,14 +1,14 @@
 "use client";
+import { useEffect, useState, useTransition } from "react";
 
 import * as z from "zod";
-import { useForm } from "react-hook-form";
-import { useEffect, useState, useTransition } from "react";
 import { axiosApiCall } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { LoginSchema } from "@/schemas";
+import { RegisterSchema } from "@/schemas";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -22,9 +22,9 @@ import { CardWrapper } from "@/components/auth/card-wrapper";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/form-error";
 import { FormSuccess } from "@/components/form-success";
-// import { login } from "@/app/api/login";
+// import { register } from "@/actions/register";
 
-export const LoginForm = () => {
+export const RegisterForm = () => {
   //   const searchParams = useSearchParams();
   //   const callbackUrl = searchParams.get("callbackUrl");
   //   const urlError = searchParams.get("error") === "OAuthAccountNotLinked"
@@ -36,14 +36,16 @@ export const LoginForm = () => {
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<z.infer<typeof LoginSchema>>({
-    resolver: zodResolver(LoginSchema),
+  const form = useForm<z.infer<typeof RegisterSchema>>({
+    resolver: zodResolver(RegisterSchema),
     defaultValues: {
       email: "",
       password: "",
+      name: "",
     },
   });
 
+  // error & success messages cleanup after 2.5 secs
   useEffect(() => {
     if (success || error) {
       const timeoutId = setTimeout(() => {
@@ -56,6 +58,7 @@ export const LoginForm = () => {
     }
   }, [success, error]);
 
+  // route to /dashboard with delay of 0.5 sec
   const router = useRouter();
   useEffect(() => {
     if (success) {
@@ -68,47 +71,55 @@ export const LoginForm = () => {
     }
   }, [success, router]);
 
-  const onSubmit = async (values: z.infer<typeof LoginSchema>) => {
+  const onSubmit = async (values: z.infer<typeof RegisterSchema>) => {
     setError("");
     setSuccess("");
-
-    //server actions
     // startTransition(() => {
-    // login(req)
-    //   .then((data) => {
-    //     if (data?.error) {
-    //       form.reset();
-    //       setError(data.error);
-    //     }
-    //     if (data?.success) {
-    //       form.reset();
-    //       setSuccess(data.success);
-    //     }
-    //   })
-    //   .catch(() => setError("Something went wrong"));
+    //   register(values)
+    //     .then((data) => {
+    //       if (data?.error) {
+    //         form.reset();
+    //         setError(data.error);
+    //       }
+    //       if (data?.success) {
+    //         form.reset();
+    //         setSuccess(data.success);
+    //       }
+    //       //         if (data?.twoFactor) {
+    //       //           setShowTwoFactor(true);
+    //       //         }
+    //     })
+    //     .catch(() => setError("Something went wrong"));
     // });
 
     // axios
     try {
       startTransition(async () => {
-        const response = await axiosApiCall("post", "auth/login/api", values);
+        const response = await axiosApiCall(
+          "post",
+          "auth/register/api",
+          values
+        );
         const data = response.data;
-        if (response.status === 200 && data.success) {
+
+        if (response.status === 201 && data.success) {
+          form.reset();
           setSuccess(data.success);
         } else if (data.error) {
+          form.reset();
           setError(data.error);
         }
       });
-    } catch (error) {
-      setError("Something went wrong!");
+    } catch {
+      setError("Something went wrong");
     }
   };
 
   return (
     <CardWrapper
-      headerLabel="Welcome back"
-      backButtonLabel="Don't have an account?"
-      backButtonHref="/auth/register"
+      headerLabel="Create an account"
+      backButtonLabel="Already have an account?"
+      backButtonHref="/auth/login"
       showSocial
     >
       <Form {...form}>
@@ -135,6 +146,24 @@ export const LoginForm = () => {
             )} */}
             {!showTwoFactor && (
               <>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled={isPending}
+                          placeholder="John Doe"
+                          type="text"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="email"
@@ -167,14 +196,14 @@ export const LoginForm = () => {
                           type="password"
                         />
                       </FormControl>
-                      <Button
+                      {/* <Button
                         size="sm"
                         variant="link"
                         asChild
                         className="px-0 font-normal"
                       >
                         <Link href="/auth/reset">Forgot password?</Link>
-                      </Button>
+                      </Button> */}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -186,7 +215,7 @@ export const LoginForm = () => {
           {/* <FormError message={error || urlError} /> */}
           <FormSuccess message={success} />
           <Button disabled={isPending} type="submit" className="w-full">
-            {showTwoFactor ? "Confirm" : "Login"}
+            {showTwoFactor ? "Confirm" : "Create an account "}
           </Button>
         </form>
       </Form>
