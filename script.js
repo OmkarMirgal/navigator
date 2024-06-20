@@ -1,11 +1,18 @@
-const fs = require("fs");
+const { default: axios } = require("axios");
 require("dotenv").config();
-const path = require("path");
 const { Client } = require("pg");
 const format = require("pg-format");
 
-// TODO: axios request for each file to get the data and then save in inputDir
-const inputDir = path.join(__dirname, "./openData/GeoJSON/");
+const openDataApiUrls = {
+  schulen:
+    "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Schulen_OpenData/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+  schulsozialarbeit:
+    "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Schulsozialarbeit_FL_1/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+  kindertageseinrichtungen:
+    "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Kindertageseinrichtungen_Sicht/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+  jugendberufshilfen:
+    "https://services6.arcgis.com/jiszdsDupTUO3fSM/arcgis/rest/services/Jugendberufshilfen_FL_1/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+};
 
 // Function to format date
 function formatDate(dateString) {
@@ -111,6 +118,14 @@ async function executeQuery(client, query) {
   }
 }
 
+async function ApiCaller(url) {
+  try {
+    return await axios.get(url);
+  } catch (error) {
+    console.error(`Error ar ApiCaller` + error);
+  }
+}
+
 // Main function to process files
 async function processFiles() {
   const client = new Client({
@@ -124,27 +139,27 @@ async function processFiles() {
   try {
     await client.connect(); // Connect to the PostgreSQL database
 
-    const files = fs.readdirSync(inputDir);
-
-    for (const file of files) {
-      const filePath = path.join(inputDir, file);
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const geojson = JSON.parse(fileContent);
-
+    for (key in openDataApiUrls) {
+      let apiResult = "";
+      let tableName = "";
+      let properties = "";
+      apiResult = await ApiCaller(openDataApiUrls[key]);
       if (
-        geojson.type !== "FeatureCollection" ||
-        !Array.isArray(geojson.features)
+        apiResult.data.type !== "FeatureCollection" ||
+        !Array.isArray(apiResult.data.features)
       ) {
-        console.error(`Invalid GeoJSON format in file: ${file}`);
+        console.error(
+          `Invalid GeoJSON format from API URL: ${openDataApiUrls[key]}`
+        );
         continue;
       }
 
-      const tableName = path.basename(file, path.extname(file));
-      const properties = geojson.features[0]?.properties || {};
+      tableName = key;
+      properties = apiResult.data.features[0]?.properties || {};
 
       // Generate SQL scripts
       const createTableSQL = generateCreateTableSQL(tableName, properties);
-      const insertSQL = generateInsertSQL(tableName, geojson.features);
+      const insertSQL = generateInsertSQL(tableName, apiResult.data.features);
 
       // Drop existing table if exists
       await executeQuery(client, `DROP TABLE IF EXISTS ${tableName}`);
@@ -164,5 +179,5 @@ async function processFiles() {
   }
 }
 
-// Start processing files
+// Start processing
 processFiles();

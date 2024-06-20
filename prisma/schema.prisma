@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  name             String
+  email            String            @unique
+  password         String
+  is_active        Boolean           @default(true)
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  homeAddressId    Int?
+  homeAddress      HomeAddress?      @relation(fields: [homeAddressId], references: [id], name: "HomeAddressUsers")
+  favoriteFacilityId Int?
+  favoriteFacility FavoriteFacility? @relation(fields: [favoriteFacilityId], references: [id], name: "FavoriteFacilityUsers")
+}
+
+model HomeAddress {
+  id         Int      @id @default(autoincrement())
+  address    String
+  latitude   Float
+  longitude  Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  users      User[]    @relation("HomeAddressUsers")
+}
+
+model FavoriteFacility {
+  id           Int      @id @default(autoincrement())
+  facilityId   Int
+  facilityType String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  users        User[]   @relation("FavoriteFacilityUsers")
+}
+
+model jugendberufshilfen {
+  objectid         Int
+  id               Int       @id
+  traeger          String?
+  leistungen       String?
+  bezeichnung      String?
+  kurzbezeichnung  String?
+  strasse          String?
+  plz              String?
+  ort              String?
+  telefon          String?
+  email            String?
+  fax              String?
+  x                String
+  y                String
+  table_created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model kindertageseinrichtungen {
+  objectid         Int
+  id               Int       @id
+  traeger          String?
+  bezeichnung      String?
+  kurzbezeichnung  String?
+  strasse          String?
+  strschl          String?
+  hausbez          String?
+  plz              String?
+  ort              String?
+  hort             String?
+  kita             String?
+  url              String?
+  telefon          String?
+  fax              String?
+  email            String?
+  barrierefrei     String?
+  integrativ       String?
+  x                String
+  y                String
+  table_created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model schulen {
+  objectid          Int
+  id                Int       @id
+  typ               Int
+  art               String?
+  standorttyp       String?
+  bezeichnung       String?
+  bezeichnungzusatz String?
+  kurzbezeichnung   String?
+  strasse           String?
+  plz               String?
+  ort               String?
+  telefon           String?
+  fax               String?
+  email             String?
+  profile           String?
+  sprachen          String?
+  www               String?
+  traeger           String?
+  traegertyp        Int
+  bezugnr           String?
+  gebietsartnummer  Int
+  snummer           Int
+  nummer            Int
+  globalid          String    @db.Uuid
+  creationdate      DateTime  @db.Timestamptz(6)
+  creator           String?
+  editdate          DateTime  @db.Timestamptz(6)
+  editor            String?
+  x                 String
+  y                 String
+  table_created_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model schulsozialarbeit {
+  objectid         Int
+  id               Int       @id
+  traeger          String?
+  leistungen       String?
+  bezeichnung      String?
+  kurzbezeichnung  String?
+  strasse          String?
+  plz              String?
+  ort              String?
+  telefon          String?
+  email            String?
+  fax              String?
+  x                String
+  y                String
+  table_created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
