@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import MapForm from "./layouts/map-form";
 import Map from "./map";
-import { LeafletMapProps, Points, Coordinates } from "@/types/point-types";
+import { Points, Coordinates } from "@/types/point-types";
 import { usePOI } from "@/context/POIContext";
 import { axiosApiCall } from "@/lib/utils";
 
@@ -46,7 +45,10 @@ const DashboardContent = ({ userId, points }: DashboardContentProps) => {
             userId: Number(userId),
           }
         );
-        if (addressResponse.status === 200) {
+        if (
+          addressResponse.status === 200 &&
+          typeof addressResponse.data === "object"
+        ) {
           setHomeCoords({
             x: addressResponse.data?.longitude,
             y: addressResponse.data?.latitude,
@@ -88,24 +90,17 @@ const DashboardContent = ({ userId, points }: DashboardContentProps) => {
 
   return (
     <>
-      {/* <div
-        className="relative hidden flex-col items-start gap-8 md:flex"
-        x-chunk="dashboard-03-chunk-0"
-      >
-        <MapForm />
-      </div> */}
       <div className="relative flex h-full min-h-[80vh] flex-col rounded-xl bg-muted/50 lg:p-4 sm:p-2 lg:col-span-4 md:col-span-4">
-        {/* <Badge variant="outline" className="absolute right-3 top-3">
-      Output
-    </Badge> */}
         <div className="flex-1 h-full">
           {/* userDetailMarker={} */}
 
-          <Map
-            points={filteredPoints}
-            {...(homeCoords ? { homePoint: homeCoords } : {})}
-            {...(homeAddress ? { homeAddress } : {})}
-          />
+          {homeCoords && homeAddress && (
+            <Map
+              points={filteredPoints}
+              homePoint={homeCoords}
+              homeAddress={homeAddress}
+            />
+          )}
         </div>
       </div>
     </>

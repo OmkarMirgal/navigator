@@ -38,8 +38,8 @@ export function UserSettingsForm({ user }: any) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user.name || "",
-      email: user.email || "",
+      name: user?.name || "",
+      email: user?.email || "",
       currentPassword: showPasswordFields ? "" : undefined,
       newPassword: showPasswordFields ? "" : undefined,
     },
@@ -84,7 +84,6 @@ export function UserSettingsForm({ user }: any) {
         }
       });
     } catch (error: any) {
-      // setError("Something went wrong!");
       toast.error("Something went wrong!" + error);
     }
   };
@@ -117,6 +116,7 @@ export function UserSettingsForm({ user }: any) {
                     {...field}
                     placeholder="john.doe@example.com"
                     type="email"
+                    disabled
                   />
                 </FormControl>
                 <FormMessage />

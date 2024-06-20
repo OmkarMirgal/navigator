@@ -7,7 +7,6 @@ export const setUserHomeAddress = async (
   values: { address: string; latitude: number; longitude: number }
 ) => {
   const userHomeAddress = await insertUserHomeAddress(userId, values);
-
   if (userHomeAddress) {
     return { success: "User Address Updated" };
   } else {

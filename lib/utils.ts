@@ -6,7 +6,7 @@ import { db } from "./db";
 import axios, { AxiosResponse } from "axios";
 
 import { Points, Point, PopupPoint } from "@/types/point-types";
-import { FavouriteRequest, FavouriteResponse } from "@/types/req-res-types";
+import { FavouriteRequest, APIResponse } from "@/types/req-res-types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -62,6 +62,7 @@ export const getUserByEmail = async (email: string) => {
         name: true,
         email: true,
         password: true,
+        is_active: true,
       },
     });
 
@@ -114,6 +115,71 @@ export const updateUserDetails = async (id: number, data: any) => {
     return updatedUser;
   } catch (error) {
     return null;
+  }
+};
+
+export const updateExistingDetailsAfterDelete = async (
+  id: number,
+  data: any
+) => {
+  try {
+    const updatedUser = await db.user.update({
+      where: { id },
+      data,
+    });
+
+    let resFav;
+    let resHome;
+    if (updatedUser.favoriteFacilityId) {
+      resFav = await removeUserFavourite(
+        updatedUser.favoriteFacilityId,
+        updatedUser.id
+      );
+      if (!resFav) {
+        return null;
+      }
+    }
+
+    if (updatedUser.homeAddressId) {
+      resHome = await removeUserHomeAddress(
+        updatedUser.homeAddressId,
+        updatedUser.id
+      );
+      if (!resHome) {
+        return null;
+      }
+    }
+    return updatedUser;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const softDeleteUser = async (userId: number): Promise<APIResponse> => {
+  try {
+    // Find the user by ID
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+      },
+    });
+
+    // If user is not found, return a response indicating so
+    if (!user) {
+      return { msg: "User not found", status: 404 };
+    }
+
+    // Update the is_active field to false
+    await db.user.update({
+      where: { id: userId },
+      data: { is_active: false },
+    });
+
+    return { msg: "User deleted succesfully", status: 200 };
+  } catch (error) {
+    console.error(`User deletion error` + error);
+    return { msg: "Internal Server Error", status: 500 };
   }
 };
 
@@ -226,6 +292,34 @@ export const getUserAddress = async (userId: number) => {
     return userAddress;
   } catch (error) {
     console.error("Error fetching home details:", error);
+  }
+};
+
+export const removeUserHomeAddress = async (
+  previousHomeAddressId: number,
+  userId: number
+) => {
+  try {
+    const disconnectHomeAddress = await db.homeAddress.update({
+      where: {
+        id: previousHomeAddressId,
+      },
+      data: {
+        // Disconnect the user from the Home Address
+        users: {
+          disconnect: {
+            id: userId, // Specify the user ID
+          },
+        },
+      },
+    });
+    if (!disconnectHomeAddress) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Error removing home address", error);
+    throw error;
   }
 };
 
@@ -773,7 +867,7 @@ export const removeFavouriteFacility = async (
   facilityId: number,
   userId: number,
   category: string
-): Promise<FavouriteResponse | boolean> => {
+): Promise<APIResponse | boolean> => {
   try {
     const facilityExists = await checkFacility(facilityId, category);
     const hasFavourite = await checkFavourites(userId);

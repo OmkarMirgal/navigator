@@ -1,44 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useState } from "react";
 import { axiosApiCall } from "@/lib/utils";
+import { usePOI } from "@/context/POIContext";
 
 import L from "leaflet";
+import "leaflet-routing-machine";
 import { LatLngExpression } from "leaflet";
-import { Marker, Popup } from "react-leaflet";
+import { Marker, Popup, useMap } from "react-leaflet";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import "./custom-leaflet-routing.css";
 
-import { LeafletMapProps, PopupPoint } from "@/types/point-types";
 import FavouriteIcon from "./favourite-icon";
-import { usePOI } from "@/context/POIContext";
 import { Badge } from "@/components/ui/badge";
+import { Coordinates, LeafletMapProps, PopupPoint } from "@/types/point-types";
 
 interface PopupContentItem {
   key: string;
   value: any;
 }
 
-const RenderMarkers = ({ points }: LeafletMapProps) => {
-  let markers = [];
-  // const [popupContent, setPopupContent] = useState<PopupContent>({});
-  const [popupContent, setPopupContent] = useState<PopupContentItem[]>([]);
+interface MarkerProps extends LeafletMapProps {
+  homePoints: LatLngExpression;
+}
 
+const RenderMarkers = ({ points, homePoints }: MarkerProps) => {
   const { userId } = usePOI();
+  const [time, setTime] = useState<String>("");
+  const [distance, setDistance] = useState<String>("");
+  const [popupContent, setPopupContent] = useState<PopupContentItem[]>([]);
+  const [hasRoutingDetails, setHasRoutingDetails] = useState<Boolean>(false);
 
   const handleMarkerClick = async ({ category, x, y }: PopupPoint) => {
     try {
-      // Empty the popupContent state
-      // setPopupContent({});
-
       const response = await axiosApiCall("post", "api/marker-details", {
         category,
         x,
         y,
       });
       if (response.status == 200) {
-        // setPopupContent(() => ({
-        //   [category + "-[" + x + "]-[" + y + "]"]: response.data,
-        // }));
         const dataArray = Object.entries(response.data)
           .filter(([_, value]) => value !== "")
           .map(([key, value]) => ({ key, value }));
@@ -50,6 +50,53 @@ const RenderMarkers = ({ points }: LeafletMapProps) => {
     }
   };
 
+  const map = useMap();
+  const homeAddress = homePoints;
+  let routingControl: L.Routing.Control | null = null;
+
+  const handleGetDistanceClick = (position: LatLngExpression) => {
+    const homeLatLng = L.latLng(homeAddress);
+    const facilityLatLng = Array.isArray(position)
+      ? L.latLng(position[0], position[1])
+      : L.latLng((position as L.LatLng).lat, (position as L.LatLng).lng);
+
+    routingControl = L.Routing.control({
+      waypoints: [homeLatLng, facilityLatLng],
+      routeWhileDragging: true,
+      showAlternatives: true,
+      fitSelectedRoutes: true,
+
+      /** This is a custom option added in Routing.control(options),
+          prevents the markers to be added for start and end position **/
+      createMarker: function (
+        i: number,
+        waypoint: L.Routing.Waypoint,
+        n: number
+      ) {
+        return undefined;
+      },
+    }).addTo(map);
+
+    routingControl.on("routesfound", function (e) {
+      const routes = e.routes;
+      const summary = routes[0].summary;
+      const distanceInKm = (summary.totalDistance / 1000).toFixed(2); // Convert meters to kilometers
+      const timeInMins = (summary.totalTime / 60).toFixed(2); // Convert seconds to minutes
+      setDistance(distanceInKm);
+      setTime(timeInMins);
+      setHasRoutingDetails(true);
+    });
+  };
+
+  map.on("popupclose", () => {
+    if (routingControl) {
+      routingControl.remove();
+      setDistance("");
+      setHasRoutingDetails(false);
+    }
+  });
+
+  let markers = [];
   for (const category in points) {
     if (points.hasOwnProperty(category)) {
       const coordinates = points[category];
@@ -62,14 +109,6 @@ const RenderMarkers = ({ points }: LeafletMapProps) => {
             parseFloat(point.y),
             parseFloat(point.x),
           ];
-
-          // const customIcon = L.divIcon({
-          //   className: "custom-marker",
-          //   html: `<div style="background-color: ${point.color}; width: 6px; height: 6px; border-radius: 50%;"></div>`,
-          //   iconSize: [20, 20],
-          //   iconAnchor: [10, 10],
-          //   popupAnchor: [0, -10],
-          // });
 
           const customIcon = L.divIcon({
             className: "custom-marker",
@@ -88,16 +127,6 @@ const RenderMarkers = ({ points }: LeafletMapProps) => {
             popupAnchor: [0, -24],
           });
 
-          // const customIcon = L.divIcon({
-          //   className: "custom-marker",
-          //   html: `
-          //       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${point.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-school"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2"/><path d="M18 5v17"/><path d="m4 6 8-4 8 4"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></svg>
-          //       `,
-          //   iconSize: [20, 20],
-          //   iconAnchor: [11, 24],
-          //   popupAnchor: [0, -24],
-          // });
-
           markers.push(
             <Marker
               key={`${category}-${key}`}
@@ -114,13 +143,52 @@ const RenderMarkers = ({ points }: LeafletMapProps) => {
             >
               <Popup autoPan={true} maxWidth={300} className="max-w-md">
                 <div className="relative">
-                  <h2 className="text-lg font-semibold mb-4 flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-semibold  flex">Details</h2>
+                    <div>
+                      {!hasRoutingDetails && (
+                        <Badge
+                          variant="default"
+                          className="absolute right-6 top-1 mr-2 hover:bg-green-600 hover:cursor-pointer "
+                          onClick={() => handleGetDistanceClick(position)}
+                        >
+                          Get Distance
+                          {/* {distance.length !== 0
+                          ? `${distance} kms from home`
+                          : `Get Distance`} */}
+                        </Badge>
+                      )}
+                      {popupContent.length > 0 && (
+                        <FavouriteIcon
+                          id={popupContent[0].value}
+                          details={point}
+                          userId={userId}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {distance.length !== 0 && (
+                    <div className="mb-4 bg-slate-200 rounded p-2">
+                      <div className="flex">
+                        <strong>Distance: </strong>
+                        <span className="ml-1">{`${distance} kms`}</span>
+                      </div>
+                      <div className="flex">
+                        <strong>time: </strong>
+                        <span className="ml-1">{`${time} mins`}</span>
+                      </div>
+                    </div>
+                  )}
+                  {/* <h2 className="text-lg font-semibold mb-4 flex justify-between items-center">
                     Details
                     <Badge
                       variant="default"
                       className="absolute right-6 top-1 mr-2 hover:bg-green-600 hover:cursor-pointer "
+                      onClick={() => handleGetDistanceClick(position)}
                     >
-                      Get Distance
+                      {distance.length !== 0
+                        ? `${distance} kms from home`
+                        : `Get Distance`}
                     </Badge>
                     {popupContent.length > 0 && (
                       <FavouriteIcon
@@ -129,7 +197,7 @@ const RenderMarkers = ({ points }: LeafletMapProps) => {
                         userId={userId}
                       />
                     )}
-                  </h2>
+                  </h2> */}
                   <div className="max-h-72 overflow-auto">
                     <strong>Category: </strong> {point.category} <br />
                     <strong>Coordinates: </strong> {position.join(", ")} <br />

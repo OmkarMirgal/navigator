@@ -10,12 +10,12 @@ export async function middleware(request: NextRequest) {
   }
 
   //redirect to /auth/login if session does not exists on protected routes
-  if (!session && request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!session && request.nextUrl.pathname.includes("/dashboard")) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 }
 
 // middleware only valid on these routes
 export const config = {
-  matcher: ["/dashboard", "/auth/login", "/auth/register"],
+  matcher: ["/dashboard", "/dashboard/user", "/auth/login", "/auth/register"],
 };

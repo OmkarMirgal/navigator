@@ -1,15 +1,15 @@
 import { setAsFavouriteFacility } from "@/lib/utils";
+import { FavouriteRequest } from "@/types/req-res-types";
 import { NextRequest, NextResponse } from "next/server";
-import { FavouriteRequest } from "@/types/point-types";
 
 export async function POST(req: NextRequest) {
-  const { id, category, userId }: FavouriteRequest = await req.json();
-  const param = {
-    category,
-    id,
-    userId,
-  };
   try {
+    const { id, category, userId }: FavouriteRequest = await req.json();
+    const param = {
+      category,
+      id,
+      userId,
+    };
     const details = await setAsFavouriteFacility(param);
     return NextResponse.json(details);
   } catch (error) {

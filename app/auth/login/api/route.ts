@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!existingUser.is_active) {
+      return NextResponse.json(
+        { error: "User does not exist!" },
+        { status: 404 }
+      );
+    }
+
     const passwordCheck = await bcrypt.compare(password, existingUser.password);
 
     if (!passwordCheck) {

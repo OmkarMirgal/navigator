@@ -12,13 +12,13 @@ model User {
   name             String
   email            String            @unique
   password         String
+  is_active        Boolean           @default(true)
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
   homeAddressId    Int?
   homeAddress      HomeAddress?      @relation(fields: [homeAddressId], references: [id], name: "HomeAddressUsers")
   favoriteFacilityId Int?
   favoriteFacility FavoriteFacility? @relation(fields: [favoriteFacilityId], references: [id], name: "FavoriteFacilityUsers")
-
 }
 
 model HomeAddress {

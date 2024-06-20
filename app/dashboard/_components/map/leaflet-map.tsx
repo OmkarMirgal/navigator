@@ -23,14 +23,15 @@ const homeIcon = L.divIcon({
 });
 
 const LeafletMap = ({ points, homePoint, homeAddress }: MapProps) => {
-  const HomePosition: LatLngExpression | undefined = homePoint
-    ? [parseFloat(homePoint.y.toString()), parseFloat(homePoint.x.toString())]
-    : undefined;
+  const HomePosition: LatLngExpression = [
+    parseFloat(homePoint!.y.toString()),
+    parseFloat(homePoint!.x.toString()),
+  ];
 
   return (
     <MapContainer
-      center={HomePosition || [50.83997274798375, 12.927821405376726]}
-      zoom={14}
+      center={HomePosition}
+      zoom={13}
       scrollWheelZoom={true}
       className="w-full h-full z-10"
     >
@@ -60,7 +61,9 @@ const LeafletMap = ({ points, homePoint, homeAddress }: MapProps) => {
       )}
 
       {/* flagged Markers  */}
-      <RenderMarkers points={points} />
+      {HomePosition && (
+        <RenderMarkers points={points} homePoints={HomePosition} />
+      )}
     </MapContainer>
   );
 };

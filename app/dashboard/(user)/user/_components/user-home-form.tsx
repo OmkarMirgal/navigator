@@ -19,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { setUserHomeAddress } from "@/actions/set-home-address";
+import { useHomeAddressModal } from "@/store/use-rename-modal";
+import { HomeAdressResponse } from "@/types/req-res-types";
 
 interface UserHomeFormProps {
   userId: number;
@@ -38,8 +40,9 @@ export function UserHomeForm({ userId, userAddress }: UserHomeFormProps) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [addressSelected, setAddressSelected] = useState<boolean>(false);
-
   const [isPending, startTransition] = useTransition();
+
+  const { setAddressSet } = useHomeAddressModal();
 
   // Initialize provider as null
   const [provider, setProvider] = useState<any>(null);
@@ -131,6 +134,26 @@ export function UserHomeForm({ userId, userAddress }: UserHomeFormProps) {
     }
   }, [address]);
 
+  const handleSetHomeAddress = async (
+    userId: number,
+    homeData: HomeAdressResponse
+  ) => {
+    0;
+    startTransition(async () => {
+      try {
+        const data = await setUserHomeAddress(userId, homeData);
+        if (data?.success) {
+          toast.success(data.success);
+          setAddressSet(true); // Update Zustand store
+        } else if (data?.error) {
+          toast.error(data.error);
+        }
+      } catch (error) {
+        toast.error("Something went wrong");
+      }
+    });
+  };
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       if (!coordinates) {
@@ -143,21 +166,10 @@ export function UserHomeForm({ userId, userAddress }: UserHomeFormProps) {
         latitude: coordinates.y,
         longitude: coordinates.x,
       };
-
-      startTransition(async () => {
-        setUserHomeAddress(userId, homeData)
-          .then((data) => {
-            if (data?.success) {
-              toast.success(data.success);
-            }
-            if (data?.error) {
-              toast.error(data.error);
-            }
-          })
-          .catch(() => toast.error("Something went wrong"));
-      });
+      await handleSetHomeAddress(userId, homeData);
     } catch (error: any) {
       toast.error(`${error.message}`);
+      console.error(`${error.message}`);
     }
   };
 

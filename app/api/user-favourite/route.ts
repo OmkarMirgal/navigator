@@ -2,17 +2,17 @@ import {
   getUserFavoriteFacility,
   getUserFavoriteFacilityDetails,
 } from "@/lib/utils";
+import { FavouriteRequest } from "@/types/req-res-types";
 import { NextRequest, NextResponse } from "next/server";
-import { FavouriteRequest } from "@/types/point-types";
 
 interface FlaggedFavouriteRequest extends FavouriteRequest {
   flag: boolean;
 }
 
 export async function POST(req: NextRequest) {
-  const { id, userId, flag, category }: FlaggedFavouriteRequest =
-    await req.json();
   try {
+    const { id, userId, flag, category }: FlaggedFavouriteRequest =
+      await req.json();
     const details = await getUserFavoriteFacilityDetails(
       userId,
       flag,
